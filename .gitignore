@@ -3,6 +3,7 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+models/best_pipeline.pkl
 # C extensions
 *.so
 
