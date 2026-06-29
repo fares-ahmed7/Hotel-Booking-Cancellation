@@ -1,25 +1,12 @@
 import pandas as pd
 import warnings
 import joblib
+import json
 
 warnings.filterwarnings("ignore")
 
-from src.preprocessing import (
-    load_data,
-    split_data,
-    handle_missing_values,
-    encode_categorical_features,
-    scale_features,
-)
-
-from src.modeling import (
-    build_logistic_regression,
-    build_decision_tree,
-    build_random_forest,
-    build_gradient_boosting,
-    build_xgboost,
-    build_lightgbm,
-)
+from src.preprocessing import load_data, split_data
+from src.pipeline import build_pipeline, get_models
 
 from src.evaluation import (
     cross_validate_model,
@@ -31,7 +18,7 @@ from src.evaluation import (
 
 
 # ==========================
-# Load Data
+# Load data
 # ==========================
 print("Loading data...")
 
@@ -39,42 +26,39 @@ X, y = load_data()
 X_train, X_test, y_train, y_test = split_data(X, y)
 
 # ==========================
-# Preprocessing
+# Save Coulmns
 # ==========================
-X_train, X_test = handle_missing_values(X_train, X_test)
-X_train, X_test = encode_categorical_features(X_train, X_test)
-X_train, X_test = scale_features(X_train, X_test)
+with open("models/features.json", "w") as f:
+    json.dump(list(X.columns), f)
 
 # ==========================
-# Models (NO FIT HERE)
+# Models
 # ==========================
-models = {
-    "Logistic Regression": build_logistic_regression(),
-    "Decision Tree": build_decision_tree(),
-    "Random Forest": build_random_forest(),
-    "Gradient Boosting": build_gradient_boosting(),
-    "XGBoost": build_xgboost(),
-    "LightGBM": build_lightgbm(),
-}
+models = get_models()
 
-# ==========================
-# Cross Validation ONLY
-# ==========================
+pipelines = {}
 results = {}
 
-print("\nRunning Cross Validation...\n")
+# ==========================
+# CROSS VALIDATION ONLY
+# ==========================
+print("\nCross Validation Phase...\n")
 
 for name, model in models.items():
 
-    print(f"CV for: {name}")
+    print(f"CV: {name}")
+
+    pipeline = build_pipeline(model, X_train)
 
     cv_mean, cv_std, _ = cross_validate_model(
-        model,
+        pipeline,
         X_train,
         y_train,
         scoring="roc_auc",
         cv=5
     )
+
+    pipelines[name] = pipeline
 
     results[name] = {
         "CV AUC": cv_mean,
@@ -90,59 +74,55 @@ print("\n================ RESULTS ================\n")
 print(results_df)
 
 # ==========================
-# Best Model Selection
+# Best Model
 # ==========================
 best_model_name = results_df.index[0]
-best_model = models[best_model_name]
+best_pipeline = pipelines[best_model_name]
 
 print("\nBest Model:", best_model_name)
 
 # ==========================
-# FINAL FIT ONLY (BEST MODEL)
+# FINAL TRAIN
 # ==========================
-print("\nTraining Best Model on full training data...")
+print("\nTraining Best Pipeline...")
 
-best_model.fit(X_train, y_train)
-
-# ==========================
-# Save Model
-# ==========================
-joblib.dump(best_model, "models/best_model.pkl")
+best_pipeline.fit(X_train, y_train)
 
 # ==========================
-# Save Results
+# SAVE MODEL
 # ==========================
-results_df.to_csv("results/cv_results.csv")
+joblib.dump(best_pipeline, "models/best_pipeline.pkl")
 
 # ==========================
-# FULL EVALUATION ON TEST SET
+# FULL EVALUATION (NOW USING ALL FUNCTIONS)
 # ==========================
-print("\nEvaluating Best Model on Test Set...\n")
+print("\nEvaluating on Test Set...\n")
 
-metrics = evaluate_model(best_model, X_test, y_test)
+# 1. metrics
+metrics = evaluate_model(best_pipeline, X_test, y_test)
 
 print("\nMetrics:")
 for k, v in metrics.items():
     print(f"{k}: {v:.4f}")
 
-# ==========================
-# Classification Report
-# ==========================
+# 2. classification report
 print("\nClassification Report:")
-print_classification_report(best_model, X_test, y_test)
+print_classification_report(best_pipeline, X_test, y_test)
+
 
 # ==========================
-# Plots
+# SAVE RESULTS
 # ==========================
-plot_confusion_matrix(best_model, X_test, y_test)
-plot_roc_curve(best_model, X_test, y_test)
+results_df.to_csv("results/cv_results.csv")
+
+with open("results/best_model.txt", "w") as f:
+    f.write(best_model_name)
 
 # ==========================
-# Done
+# DONE
 # ==========================
 print("\n==============================")
-print("TRAINING COMPLETED SUCCESSFULLY")
+print("TRAINING COMPLETED")
 print("==============================")
 print("Best Model:", best_model_name)
-print("Saved to: models/best_model.pkl")
-print("Results saved to: results/cv_results.csv")
+print("Saved: models/best_pipeline.pkl")
