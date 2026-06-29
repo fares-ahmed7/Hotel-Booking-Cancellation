@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import (
@@ -78,7 +79,7 @@ def print_classification_report(model, X, y):
     print(classification_report(y, y_pred))
 
 
-def plot_confusion_matrix(model, X, y):
+def plot_confusion_matrix(model, X, y, save_path=None):
     """
     Plot confusion matrix.
     """
@@ -94,11 +95,16 @@ def plot_confusion_matrix(model, X, y):
     disp.plot(cmap="Blues")
 
     plt.title("Confusion Matrix")
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
     plt.show()
+    plt.close()
 
 
-def plot_roc_curve(model, X, y):
+def plot_roc_curve(model, X, y, save_path=None):
     """
     Plot ROC Curve.
     """
@@ -111,4 +117,10 @@ def plot_roc_curve(model, X, y):
 
     plt.title("ROC Curve")
 
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
     plt.show()
+    plt.close()
