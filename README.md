@@ -342,18 +342,6 @@ The API will be available at `http://localhost:8080`.
 
 ---
 
-## 📌 Future Improvements
-
-- [ ] Hyperparameter optimization
-- [ ] Feature selection
-- [ ] CI/CD pipeline
-- [ ] Cloud deployment
-- [ ] Model monitoring
-- [ ] MLflow integration
-- [ ] Streamlit dashboard
-
----
-
 ## 📜 License
 
 This project is licensed under the **Apache-2.0 License**. See the [LICENSE](LICENSE) file for details.
